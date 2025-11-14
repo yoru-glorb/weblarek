@@ -1,3 +1,4 @@
+import { API_ORIGIN } from './constants';
 export function pascalToKebab(value: string): string {
     return value.replace(/([a-z0–9])([A-Z])/g, "$1-$2").toLowerCase();
 }
@@ -27,6 +28,7 @@ export function ensureAllElements<T extends HTMLElement>(selectorElement: Select
 
 export type SelectorElement<T> = T | string;
 
+
 export function ensureElement<T extends HTMLElement>(selectorElement: SelectorElement<T>, context?: HTMLElement): T {
     if (isSelector(selectorElement)) {
         const elements = ensureAllElements<T>(selectorElement, context);
@@ -46,10 +48,8 @@ export function ensureElement<T extends HTMLElement>(selectorElement: SelectorEl
 
 export function cloneTemplate<T extends HTMLElement>(query: string | HTMLTemplateElement): T {
     const template = ensureElement(query) as HTMLTemplateElement;
-    if (!template.content.firstElementChild) {
-        throw new Error(`Template ${query} has no content`);
-    }
-    return template.content.firstElementChild.cloneNode(true) as T;
+    return template.content.firstElementChild!.cloneNode(true) as T; // не забыть убрать подавление "!"
+    
 }
 
 export function bem(block: string, element?: string, modifier?: string): { name: string, class: string } {
@@ -69,21 +69,15 @@ export function getObjectProperties(obj: object, filter?: (name: string, prop: P
         )
     )
         .filter(([name, prop]: [string, PropertyDescriptor]) => filter ? filter(name, prop) : (name !== 'constructor'))
-        .map(([name,]) => name);
+        .map(([name, _ ]) => name); // заменить на  .map(([name, prop]) => name);
 }
 
-/**
- * Устанавливает dataset атрибуты элемента
- */
 export function setElementData<T extends Record<string, unknown> | object>(el: HTMLElement, data: T) {
     for (const key in data) {
         el.dataset[key] = String(data[key]);
     }
 }
 
-/**
- * Получает типизированные данные из dataset атрибутов элемента
- */
 export function getElementData<T extends Record<string, unknown>>(el: HTMLElement, scheme: Record<string, Function>): T {
     const data: Partial<T> = {};
     for (const key in el.dataset) {
@@ -92,9 +86,7 @@ export function getElementData<T extends Record<string, unknown>>(el: HTMLElemen
     return data as T;
 }
 
-/**
- * Проверка на простой объект
- */
+
 export function isPlainObject(obj: unknown): obj is object {
     const prototype = Object.getPrototypeOf(obj);
     return  prototype === Object.getPrototypeOf({}) ||
@@ -105,11 +97,6 @@ export function isBoolean(v: unknown): v is boolean {
     return typeof v === 'boolean';
 }
 
-/**
- * Фабрика DOM-элементов в простейшей реализации
- * здесь не учтено много факторов
- * в интернет можно найти более полные реализации
- */
 export function createElement<
     T extends HTMLElement
     >(
@@ -135,4 +122,35 @@ export function createElement<
         }
     }
     return element;
+}
+export function resolveImagePath(path: string): string {
+  if (!path) return '';
+  if (/^https?:\/\//.test(path)) {
+    return path
+      .replace('/api/weblarek/', '/content/weblarek/')
+      .replace(/\.svg(\?.*)?$/, '.png$1');
+  }
+
+  if (path.startsWith('/content/weblarek/')) {
+    return `${API_ORIGIN.replace(/\/$/, '')}${path}`;
+  }
+
+  if (path.startsWith('/api/weblarek/')) {
+    const file = path.replace('/api/weblarek/', '').replace(/\.svg(\?.*)?$/, '.png$1');
+    return `${API_ORIGIN.replace(/\/$/, '')}/content/weblarek/${file}`;
+  }
+
+  const file = path.replace(/^\//, '').replace(/\.svg(\?.*)?$/, '.png$1');
+  return `${API_ORIGIN.replace(/\/$/, '')}/content/weblarek/${file}`;
+}
+
+export enum EventNames {
+  CardSelect = 'card:select',
+  CartAdd = 'cart:add',
+  CartRemove = 'cart:remove',
+  CartRemoveById = 'cart:remove-by-id',
+  CartOrder = 'cart:order',
+  OrderNext = 'order:next',
+  OrderConfirm = 'order:confirm',
+  SuccessClose = 'success:close',
 }
